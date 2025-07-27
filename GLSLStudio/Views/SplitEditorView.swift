@@ -15,9 +15,7 @@ struct SplitEditorView: View {
                 )
                 .frame(minWidth: 400)
             }
-            
-//            Divider()
-            
+                        
             VStack(spacing: 0) {
                 PreviewView(project: project)
                     .frame(minWidth: 400)
@@ -45,89 +43,20 @@ struct EditorTabView: View {
     @EnvironmentObject var projectsViewModel: ProjectsViewModel
     
     var body: some View {
-        VStack(spacing: 0) {
-            HStack(spacing: 0) {
-                ForEach(project.shaderFiles, id: \.id) { shaderFile in
-                    EditorTab(
-                        shaderFile: shaderFile,
-                        isSelected: selectedShaderFile?.id == shaderFile.id
-                    ) {
-                        selectedShaderFile = shaderFile
-                    }
-                }
-                Spacer()
-            }
-//            .background(Color(.systemGray6))
-            
-            if let selectedFile = selectedShaderFile {
+        TabView(selection: $selectedShaderFile) {
+            ForEach(project.shaderFiles, id: \.id) { shaderFile in
                 ShaderCodeEditor(
-                    shaderFile: selectedFile,
+                    shaderFile: shaderFile,
                     onContentChange: { content in
-                        projectsViewModel.updateShaderContent(selectedFile, content: content)
+                        projectsViewModel.updateShaderContent(shaderFile, content: content)
                     }
                 )
-            } else {
-                EmptyCodeEditorView()
+                .tabItem {
+                    Label(shaderFile.type.displayName, systemImage: shaderFile.type == .vertex ? "v.circle" : "f.circle")
+                }
+                .tag(shaderFile as ShaderFile?)
             }
         }
     }
 }
 
-struct EditorTab: View {
-    let shaderFile: ShaderFile
-    let isSelected: Bool
-    let action: () -> Void
-    
-    var body: some View {
-        Button(action: action) {
-            HStack {
-                
-                Text(shaderFile.type.displayName)
-                    .font(.system(size: 14, weight: .medium))
-                    .foregroundColor(isSelected ? .primary : .secondary)
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 8)
-            .background(
-                isSelected ? Color(.systemBackground) : Color.clear
-            )
-            .cornerRadius(8, corners: [.topLeft, .topRight])
-        }
-        .buttonStyle(PlainButtonStyle())
-    }
-}
-
-struct EmptyCodeEditorView: View {
-    var body: some View {
-        VStack {
-            Image(systemName: "doc.text")
-                .font(.system(size: 48))
-                .foregroundColor(.secondary)
-            Text("Select a shader file to edit")
-                .font(.headline)
-                .foregroundColor(.secondary)
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Color(.systemBackground))
-    }
-}
-
-extension View {
-    func cornerRadius(_ radius: CGFloat, corners: UIRectCorner) -> some View {
-        clipShape(RoundedCorner(radius: radius, corners: corners))
-    }
-}
-
-struct RoundedCorner: Shape {
-    var radius: CGFloat = .infinity
-    var corners: UIRectCorner = .allCorners
-
-    func path(in rect: CGRect) -> Path {
-        let path = UIBezierPath(
-            roundedRect: rect,
-            byRoundingCorners: corners,
-            cornerRadii: CGSize(width: radius, height: radius)
-        )
-        return Path(path.cgPath)
-    }
-}

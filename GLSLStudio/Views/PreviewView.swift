@@ -8,12 +8,7 @@ struct PreviewView: View {
     
     var body: some View {
         VStack(spacing: 0) {
-//            PreviewHeader(
-//                webGLService: webGLService,
-//                showingControls: $showingControls,
-//                project: project
-//            )
-//            
+
             ZStack {
                 WebGLPreviewView(
                     project: project,
@@ -45,19 +40,6 @@ struct PreviewView: View {
                         webGLService: webGLService,
                         project: project
                     )
-                }
-            }
-        }
-        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("CaptureFrame"))) { notification in
-            if let captureProject = notification.object as? ShaderProject,
-               captureProject.id == project.id {
-                webGLService.captureFrame { image in
-                    if let image = image {
-                        // Save thumbnail
-                        if let data = image.pngData() {
-                            project.thumbnailData = data
-                        }
-                    }
                 }
             }
         }
@@ -102,35 +84,7 @@ struct WebGLPreviewView: UIViewRepresentable {
     }
 }
 
-struct PreviewHeader: View {
-    let webGLService: WebGLService
-    @Binding var showingControls: Bool
-    let project: ShaderProject
-    
-    var body: some View {
-        HStack {
-            Text("Preview")
-                .foregroundColor(.primary)
-            
-            if webGLService.isReady {
-                Circle()
-                    .fill(Color.green)
-                    .frame(width: 8, height: 8)
-            }
-            
-            Spacer()
-            
-            Button(action: {
-                showingControls.toggle()
-            }) {
-                Image(systemName: "slider.horizontal.3")
-                    .font(.title2)
-                    .foregroundColor(.blue)
-            }
-        }
-        .padding()
-    }
-}
+
 
 struct ErrorOverlay: View {
     let error: String

@@ -10,6 +10,15 @@ struct ProjectToolbarView: View {
     
     var body: some View {
         HStack(spacing: 8) {
+            
+            Button(action: {
+                projectsViewModel.saveProject(project)
+            }) {
+                Text("Save")
+                    .font(.title2)
+                    .foregroundStyle(.blue)
+            }
+
             Menu {
                 Button(action: { showingRenameAlert = true }) {
                     Label("Rename", systemImage: "pencil")
@@ -32,24 +41,7 @@ struct ProjectToolbarView: View {
                     .foregroundColor(.blue)
             }
             
-            Button(action: {
-                // Global capture action - can be triggered from anywhere
-                NotificationCenter.default.post(
-                    name: NSNotification.Name("CaptureFrame"),
-                    object: project
-                )
-            }) {
-                Image(systemName: "camera")
-                    .font(.title2)
-                    .foregroundColor(.blue)
-            }
             
-            Button(action: {
-                projectsViewModel.saveProject(project)
-            }) {
-                Image(systemName: "square.and.arrow.down")
-                    .font(.title2)
-            }
         }
         .alert("Rename Project", isPresented: $showingRenameAlert) {
             TextField("Project Name", text: $newProjectName)

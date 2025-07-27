@@ -38,7 +38,6 @@ struct ProjectListView: View {
                 .searchable(text: $searchText, prompt: "Search projects")
             }
         }
-        .navigationTitle("GLSL Studio")
         .alert("Delete Project", isPresented: $showingDeleteAlert) {
             Button("Cancel", role: .cancel) {}
             Button("Delete", role: .destructive) {
@@ -65,7 +64,7 @@ struct ProjectListHeader: View {
     var body: some View {
         HStack {
             Text("Projects")
-                .font(.largeTitle)
+                .font(.title)
                 .fontWeight(.bold)
             
             Spacer()
@@ -142,15 +141,7 @@ struct ProjectCard: View {
                 }
                 
                 Spacer()
-                
-                VStack(spacing: 4) {
-                    Circle()
-                        .fill(Color.blue)
-                        .frame(width: 8, height: 8)
-                    Circle()
-                        .fill(Color.orange)
-                        .frame(width: 8, height: 8)
-                }
+
             }
             
             ProjectThumbnail(project: project)

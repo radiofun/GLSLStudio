@@ -5,11 +5,14 @@ struct GLSLTextEditorView: UIViewRepresentable {
     @Binding var text: String
     @Binding var isEditing: Bool
     
-    func makeUIView(context: Context) -> GLSLTextView {
+    func makeUIView(context: Context) -> UIView {
+        let containerView = UIView()
+        
+        let lineNumberView = LineNumberView()
         let textView = GLSLTextView()
+        
         textView.delegate = context.coordinator
         textView.font = UIFont.monospacedSystemFont(ofSize: 14, weight: .regular)
-        textView.backgroundColor = UIColor.systemBackground
         textView.textColor = UIColor.label
         textView.isEditable = true
         textView.isScrollEnabled = true
@@ -22,13 +25,49 @@ struct GLSLTextEditorView: UIViewRepresentable {
         textView.smartDashesType = .no
         textView.smartInsertDeleteType = .no
         
-        return textView
+        // Set line spacing for better readability
+        let paragraphStyle = NSMutableParagraphStyle()
+        paragraphStyle.lineSpacing = 4.0
+        textView.typingAttributes = [
+            .font: UIFont.monospacedSystemFont(ofSize: 14, weight: .regular),
+            .foregroundColor: UIColor.label,
+            .paragraphStyle: paragraphStyle
+        ]
+                
+        // Setup constraints
+        containerView.addSubview(lineNumberView)
+        containerView.addSubview(textView)
+        
+        lineNumberView.translatesAutoresizingMaskIntoConstraints = false
+        textView.translatesAutoresizingMaskIntoConstraints = false
+        
+        NSLayoutConstraint.activate([
+            lineNumberView.leadingAnchor.constraint(equalTo: containerView.leadingAnchor),
+            lineNumberView.topAnchor.constraint(equalTo: containerView.topAnchor),
+            lineNumberView.bottomAnchor.constraint(equalTo: containerView.bottomAnchor),
+            lineNumberView.widthAnchor.constraint(equalToConstant: 50),
+            
+            textView.leadingAnchor.constraint(equalTo: lineNumberView.trailingAnchor),
+            textView.trailingAnchor.constraint(equalTo: containerView.trailingAnchor),
+            textView.topAnchor.constraint(equalTo: containerView.topAnchor),
+            textView.bottomAnchor.constraint(equalTo: containerView.bottomAnchor)
+        ])
+        
+        // Store references for updates
+        textView.lineNumberView = lineNumberView
+        lineNumberView.textView = textView
+        
+        return containerView
     }
     
-    func updateUIView(_ uiView: GLSLTextView, context: Context) {
-        if uiView.text != text {
-            uiView.text = text
-            uiView.applySyntaxHighlighting()
+    func updateUIView(_ uiView: UIView, context: Context) {
+        // Find the text view within the container
+        if let textView = uiView.subviews.compactMap({ $0 as? GLSLTextView }).first {
+            if textView.text != text {
+                textView.text = text
+                textView.applySyntaxHighlighting()
+                textView.lineNumberView?.updateLineNumbers()
+            }
         }
     }
     
@@ -54,6 +93,9 @@ struct GLSLTextEditorView: UIViewRepresentable {
         func textViewDidChange(_ textView: UITextView) {
             parent.text = textView.text
             if let glslTextView = textView as? GLSLTextView {
+                // Update line numbers immediately
+                glslTextView.lineNumberView?.updateLineNumbers()
+                
                 // Delay syntax highlighting to avoid performance issues while typing
                 NSObject.cancelPreviousPerformRequests(withTarget: glslTextView, selector: #selector(GLSLTextView.applySyntaxHighlighting), object: nil)
                 glslTextView.perform(#selector(GLSLTextView.applySyntaxHighlighting), with: nil, afterDelay: 0.3)
@@ -112,6 +154,7 @@ struct GLSLTextEditorView: UIViewRepresentable {
 class GLSLTextView: UITextView {
     
     private let syntaxHighlighter = GLSLSyntaxHighlighter()
+    weak var lineNumberView: LineNumberView?
     
     override func awakeFromNib() {
         super.awakeFromNib()
@@ -169,6 +212,7 @@ class GLSLTextView: UITextView {
         let attributedText = syntaxHighlighter.highlight(text: text)
         self.attributedText = attributedText
         selectedRange = currentRange
+        lineNumberView?.updateLineNumbers()
     }
 }
 
@@ -269,9 +313,13 @@ class GLSLSyntaxHighlighter {
         let attributedString = NSMutableAttributedString(string: text)
         let range = NSRange(location: 0, length: text.count)
         
-        // Set base attributes
+        // Set base attributes with line spacing
+        let paragraphStyle = NSMutableParagraphStyle()
+        paragraphStyle.lineSpacing = 4.0
+        
         attributedString.addAttribute(.foregroundColor, value: textColor, range: range)
         attributedString.addAttribute(.font, value: UIFont.monospacedSystemFont(ofSize: 14, weight: .regular), range: range)
+        attributedString.addAttribute(.paragraphStyle, value: paragraphStyle, range: range)
         
         // Apply syntax highlighting
         highlightComments(in: attributedString)
@@ -344,6 +392,71 @@ class GLSLSyntaxHighlighter {
             }
         } catch {
             print("Regex error: \(error)")
+        }
+    }
+}
+
+class LineNumberView: UIView {
+    weak var textView: UITextView?
+    private let label = UILabel()
+    
+    override init(frame: CGRect) {
+        super.init(frame: frame)
+        setupView()
+    }
+    
+    required init?(coder: NSCoder) {
+        super.init(coder: coder)
+        setupView()
+    }
+    
+    private func setupView() {
+        addSubview(label)
+        label.translatesAutoresizingMaskIntoConstraints = false
+        label.font = UIFont.monospacedSystemFont(ofSize: 12, weight: .regular)
+        label.textColor = UIColor.secondaryLabel
+        label.textAlignment = .right
+        label.numberOfLines = 0
+        label.backgroundColor = UIColor.clear
+        
+        NSLayoutConstraint.activate([
+            label.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 4),
+            label.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -4),
+            label.topAnchor.constraint(equalTo: topAnchor, constant: 8),
+            label.bottomAnchor.constraint(lessThanOrEqualTo: bottomAnchor)
+        ])
+        
+    }
+    
+    func updateLineNumbers() {
+        guard let textView = textView else { return }
+        
+        let text = textView.text ?? ""
+        let lineCount = text.components(separatedBy: .newlines).count
+        
+        var lineNumbers = ""
+        for i in 1...max(lineCount, 1) {
+            lineNumbers += "\(i)\n"
+        }
+        
+        // Create attributed string with matching line spacing
+        let attributedLineNumbers = NSMutableAttributedString(string: String(lineNumbers.dropLast()))
+        let paragraphStyle = NSMutableParagraphStyle()
+        paragraphStyle.lineSpacing = 4.0
+        paragraphStyle.alignment = .right
+        
+        let range = NSRange(location: 0, length: attributedLineNumbers.length)
+        attributedLineNumbers.addAttribute(.paragraphStyle, value: paragraphStyle, range: range)
+        attributedLineNumbers.addAttribute(.font, value: UIFont.monospacedSystemFont(ofSize: 12, weight: .regular), range: range)
+        attributedLineNumbers.addAttribute(.foregroundColor, value: UIColor.secondaryLabel, range: range)
+        
+        label.attributedText = attributedLineNumbers
+    }
+    
+    override func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?) {
+        super.traitCollectionDidChange(previousTraitCollection)
+        if traitCollection.hasDifferentColorAppearance(comparedTo: previousTraitCollection) {
+            layer.borderColor = UIColor.separator.cgColor
         }
     }
 }
