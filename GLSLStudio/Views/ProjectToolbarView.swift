@@ -27,7 +27,6 @@ struct ProjectToolbarView: View {
                 showingFullScreenPreview = true
             }) {
                 Image(systemName: "arrow.up.left.and.arrow.down.right")
-                    .font(.title2)
                     .foregroundColor(.primary)
             }
             
@@ -49,7 +48,6 @@ struct ProjectToolbarView: View {
                 }
             } label: {
                 Image(systemName: "ellipsis.circle")
-                    .font(.title2)
                     .foregroundColor(.primary)
             }
             
@@ -266,6 +264,18 @@ struct FullScreenPreviewView: View {
             
             VStack {
                 HStack {
+                    Button(action: {
+                        dismiss()
+                    }) {
+                        Image(systemName: "xmark")
+                            .foregroundColor(.white)
+                            .frame(width: 32, height: 32)
+                            .padding(4)
+                            .background(Color.black.opacity(0.6))
+                            .clipShape(Circle())
+                    }
+                    
+
                     Spacer()
                     
                     if showFPS {
@@ -279,7 +289,7 @@ struct FullScreenPreviewView: View {
                         }
                         .padding(12)
                         .background(Color.black.opacity(0.7))
-                        .cornerRadius(8)
+                        .cornerRadius(12)
                         .onTapGesture {
                             showFPS = false
                         }
@@ -288,22 +298,6 @@ struct FullScreenPreviewView: View {
                 .padding()
                 
                 Spacer()
-                
-                HStack {
-                    Button(action: {
-                        dismiss()
-                    }) {
-                        Text("Exit Full Screen")
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 8)
-                            .background(Color.black.opacity(0.7))
-                            .foregroundColor(.white)
-                            .cornerRadius(8)
-                    }
-                    
-                    Spacer()
-                }
-                .padding()
             }
         }
         .onTapGesture(count: 2) {
