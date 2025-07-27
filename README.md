@@ -1,6 +1,6 @@
 # GLSL Studio
 
-![](glsleditor.jpg)
+![](glslstudio.jpeg)
 
 GLSL Studio is a simple IDE allows you to write and preview glsl shader code. 
 
