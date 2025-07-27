@@ -53,12 +53,12 @@ extension WebGLService {
             position: absolute;
             top: 10px;
             right: 10px;
-            color: #00ff00;
-            font-family: monospace;
-            font-size: 11px;
+            color: #ffffff;
+            font-family: ui-monospace, "SF Mono", Consolas, "Liberation Mono", Menlo, Courier, monospace;
+            font-size: 8px;
             background: rgba(0,0,0,0.7);
-            padding: 8px;
-            border-radius: 4px;
+            padding: 12px;
+            border-radius: 16px;
             display: none;
         }
     </style>

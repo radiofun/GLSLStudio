@@ -16,7 +16,7 @@ struct SplitEditorView: View {
                 .frame(minWidth: 400)
             }
             
-            Divider()
+//            Divider()
             
             VStack(spacing: 0) {
                 PreviewView(project: project)
@@ -57,7 +57,7 @@ struct EditorTabView: View {
                 }
                 Spacer()
             }
-            .background(Color(.systemGray6))
+//            .background(Color(.systemGray6))
             
             if let selectedFile = selectedShaderFile {
                 ShaderCodeEditor(
@@ -81,9 +81,6 @@ struct EditorTab: View {
     var body: some View {
         Button(action: action) {
             HStack {
-                Circle()
-                    .fill(shaderFile.type == .vertex ? Color.blue : Color.orange)
-                    .frame(width: 8, height: 8)
                 
                 Text(shaderFile.type.displayName)
                     .font(.system(size: 14, weight: .medium))

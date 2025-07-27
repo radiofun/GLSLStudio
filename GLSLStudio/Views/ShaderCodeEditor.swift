@@ -16,31 +16,20 @@ struct ShaderCodeEditor: View {
     
     var body: some View {
         VStack(spacing: 0) {
-            HStack {
-                Text(shaderFile.type.displayName)
-                    .font(.headline)
-                    .foregroundColor(.primary)
+    
+            ZStack{
                 
-                Spacer()
-                
-                if isEditing {
-                    Text("Editing...")
-                        .font(.caption)
-                        .foregroundColor(.orange)
+                GLSLTextEditorView(
+                    text: $content,
+                    isEditing: $isEditing
+                )
+                .onChange(of: content) { oldValue, newValue in
+                    onContentChange(newValue)
+                    autoSaveService.markAsChanged()
+                    print("✏️ Editor: Content changed for \(shaderFile.type.displayName)")
+                    print("📝 New content (first 100 chars): \(String(newValue.prefix(100)))")
                 }
-            }
-            .padding()
-            .background(Color(.systemGray6))
-            
-            GLSLTextEditorView(
-                text: $content,
-                isEditing: $isEditing
-            )
-            .onChange(of: content) { oldValue, newValue in
-                onContentChange(newValue)
-                autoSaveService.markAsChanged()
-                print("✏️ Editor: Content changed for \(shaderFile.type.displayName)")
-                print("📝 New content (first 100 chars): \(String(newValue.prefix(100)))")
+
             }
         }
         .onAppear {

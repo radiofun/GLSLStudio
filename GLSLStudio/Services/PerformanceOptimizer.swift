@@ -194,7 +194,11 @@ struct PerformanceMonitorView: View {
                     Text("\(Int(webGLService.fps))")
                         .fontWeight(.medium)
                 }
-                .font(.caption)
+                .font(.system(.caption, design: .monospaced))
+                .foregroundColor(.white)
+                .padding(8)
+                .background(Color.black.opacity(0.8))
+                .cornerRadius(8)
                 
                 HStack {
                     Text("Render Time:")

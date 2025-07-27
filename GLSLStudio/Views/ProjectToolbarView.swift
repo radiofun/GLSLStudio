@@ -29,13 +29,19 @@ struct ProjectToolbarView: View {
             } label: {
                 Image(systemName: "ellipsis.circle")
                     .font(.title2)
+                    .foregroundColor(.blue)
             }
             
             Button(action: {
-                // TODO: Save screenshot as thumbnail
+                // Global capture action - can be triggered from anywhere
+                NotificationCenter.default.post(
+                    name: NSNotification.Name("CaptureFrame"),
+                    object: project
+                )
             }) {
                 Image(systemName: "camera")
                     .font(.title2)
+                    .foregroundColor(.blue)
             }
             
             Button(action: {

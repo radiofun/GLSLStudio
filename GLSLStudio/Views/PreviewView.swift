@@ -4,23 +4,20 @@ import WebKit
 struct PreviewView: View {
     let project: ShaderProject
     @StateObject private var webGLService = WebGLService()
-    @State private var selectedGeometry: GeometryType = .quad
     @State private var showingControls = false
     
     var body: some View {
         VStack(spacing: 0) {
-            PreviewHeader(
-                webGLService: webGLService,
-                selectedGeometry: $selectedGeometry,
-                showingControls: $showingControls,
-                project: project
-            )
-            
+//            PreviewHeader(
+//                webGLService: webGLService,
+//                showingControls: $showingControls,
+//                project: project
+//            )
+//            
             ZStack {
                 WebGLPreviewView(
                     project: project,
-                    webGLService: webGLService,
-                    selectedGeometry: selectedGeometry
+                    webGLService: webGLService
                 )
                 .onChange(of: project.vertexShader?.content) { oldValue, newValue in
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
@@ -51,13 +48,25 @@ struct PreviewView: View {
                 }
             }
         }
+        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("CaptureFrame"))) { notification in
+            if let captureProject = notification.object as? ShaderProject,
+               captureProject.id == project.id {
+                webGLService.captureFrame { image in
+                    if let image = image {
+                        // Save thumbnail
+                        if let data = image.pngData() {
+                            project.thumbnailData = data
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 
 struct WebGLPreviewView: UIViewRepresentable {
     let project: ShaderProject
     let webGLService: WebGLService
-    let selectedGeometry: GeometryType
     
     func makeUIView(context: Context) -> WKWebView {
         let webView = webGLService.setupWebView()
@@ -71,8 +80,8 @@ struct WebGLPreviewView: UIViewRepresentable {
     }
     
     func updateUIView(_ webView: WKWebView, context: Context) {
-        // Only update geometry changes, shader updates are handled separately
-        webGLService.setGeometry(selectedGeometry)
+        // Default to quad geometry
+        webGLService.setGeometry(.quad)
     }
     
     private func updateShaders() {
@@ -95,14 +104,12 @@ struct WebGLPreviewView: UIViewRepresentable {
 
 struct PreviewHeader: View {
     let webGLService: WebGLService
-    @Binding var selectedGeometry: GeometryType
     @Binding var showingControls: Bool
     let project: ShaderProject
     
     var body: some View {
         HStack {
             Text("Preview")
-                .font(.headline)
                 .foregroundColor(.primary)
             
             if webGLService.isReady {
@@ -113,49 +120,15 @@ struct PreviewHeader: View {
             
             Spacer()
             
-            Menu {
-                ForEach(GeometryType.allCases, id: \.self) { geometry in
-                    Button(action: {
-                        selectedGeometry = geometry
-                    }) {
-                        HStack {
-                            Text(geometry.displayName)
-                            if selectedGeometry == geometry {
-                                Spacer()
-                                Image(systemName: "checkmark")
-                            }
-                        }
-                    }
-                }
-            } label: {
-                Image(systemName: "cube")
-                    .font(.title2)
-            }
-            
             Button(action: {
                 showingControls.toggle()
             }) {
                 Image(systemName: "slider.horizontal.3")
                     .font(.title2)
-                    .foregroundColor(showingControls ? .accentColor : .primary)
-            }
-            
-            Button(action: {
-                webGLService.captureFrame { image in
-                    if let image = image {
-                        // Save thumbnail
-                        if let data = image.pngData() {
-                            project.thumbnailData = data
-                        }
-                    }
-                }
-            }) {
-                Image(systemName: "camera")
-                    .font(.title2)
+                    .foregroundColor(.blue)
             }
         }
         .padding()
-        .background(Color(.systemGray6))
     }
 }
 
