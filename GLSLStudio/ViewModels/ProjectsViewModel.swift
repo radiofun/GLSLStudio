@@ -71,6 +71,10 @@ class ProjectsViewModel: ObservableObject {
         
         let newProject = ShaderProject(name: "\(project.name) Copy")
         
+        // Clear the default shader files that were created in init
+        newProject.shaderFiles.removeAll()
+        
+        // Copy the actual shader files from the original project
         for shaderFile in project.shaderFiles {
             let newShaderFile = ShaderFile(
                 name: shaderFile.name,

@@ -55,6 +55,7 @@ struct EditorTabView: View {
                     Label(shaderFile.type.displayName, systemImage: shaderFile.type == .vertex ? "v.circle" : "f.circle")
                 }
                 .tag(shaderFile as ShaderFile?)
+
             }
         }
     }

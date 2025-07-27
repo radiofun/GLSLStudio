@@ -203,15 +203,15 @@ struct ExportTypeSelector: View {
                         VStack(spacing: 8) {
                             Image(systemName: type.icon)
                                 .font(.title2)
-                                .foregroundColor(selectedType == type ? .white : .accentColor)
+                                .foregroundColor(selectedType == type ? Color(.buttontext) : .accentColor)
                             
                             Text(type.rawValue)
                                 .font(.caption)
-                                .foregroundColor(selectedType == type ? .white : .primary)
+                                .foregroundColor(selectedType == type ? Color(.buttontext) : .primary)
                         }
                         .frame(maxWidth: .infinity)
                         .padding()
-                        .background(selectedType == type ? Color.accentColor : Color(.systemGray6))
+                        .background(selectedType == type ? Color(.buttonbg) : Color(.systemGray6))
                         .cornerRadius(12)
                     }
                     .buttonStyle(PlainButtonStyle())
@@ -264,10 +264,10 @@ struct ExportButton: View {
                 Text("Export \(exportType.rawValue)")
             }
             .font(.headline)
-            .foregroundColor(.white)
+            .foregroundColor(Color(.buttontext))
             .frame(maxWidth: .infinity)
             .padding()
-            .background(Color.accentColor)
+            .background(Color(.buttonbg))
             .cornerRadius(12)
         }
     }

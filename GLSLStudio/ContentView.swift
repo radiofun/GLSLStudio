@@ -23,7 +23,8 @@ struct ContentView: View {
             )
             .environmentObject(projectsViewModel)
         } detail: {
-            if let project = selectedProject {
+            if let project = selectedProject,
+               projectsViewModel.projects.contains(where: { $0.id == project.id }) {
                 SplitEditorView(project: project)
                     .environmentObject(projectsViewModel)
                     .environmentObject(autoSaveService)
@@ -43,6 +44,13 @@ struct ContentView: View {
         .onAppear {
             projectsViewModel.setModelContext(modelContext)
             projectsViewModel.connectAutoSave(autoSaveService)
+        }
+        .onChange(of: projectsViewModel.projects) { oldValue, newValue in
+            // Clear selected project if it no longer exists
+            if let selected = selectedProject,
+               !newValue.contains(where: { $0.id == selected.id }) {
+                selectedProject = nil
+            }
         }
         .tint(.primary)
     }
