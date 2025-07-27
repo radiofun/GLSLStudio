@@ -6,16 +6,44 @@
 //
 
 import SwiftUI
+import SwiftData
 
 struct ContentView: View {
+    @Environment(\.modelContext) private var modelContext
+    @StateObject private var projectsViewModel = ProjectsViewModel()
+    @StateObject private var autoSaveService = AutoSaveService()
+    @State private var selectedProject: ShaderProject?
+    @State private var showNewProjectSheet = false
+    
     var body: some View {
-        VStack {
-            Image(systemName: "globe")
-                .imageScale(.large)
-                .foregroundStyle(.tint)
-            Text("Hello, world!")
+        NavigationSplitView {
+            ProjectListView(
+                selectedProject: $selectedProject,
+                showNewProjectSheet: $showNewProjectSheet
+            )
+            .environmentObject(projectsViewModel)
+        } detail: {
+            if let project = selectedProject {
+                SplitEditorView(project: project)
+                    .environmentObject(projectsViewModel)
+                    .environmentObject(autoSaveService)
+            } else {
+                EmptyProjectView()
+            }
         }
-        .padding()
+        .sheet(isPresented: $showNewProjectSheet) {
+            NewProjectSheet(selectedProject: $selectedProject)
+                .environmentObject(projectsViewModel)
+        }
+        .glslStudioKeyboardShortcuts(
+            projectsViewModel: projectsViewModel,
+            selectedProject: $selectedProject,
+            showNewProjectSheet: $showNewProjectSheet
+        )
+        .onAppear {
+            projectsViewModel.setModelContext(modelContext)
+            projectsViewModel.connectAutoSave(autoSaveService)
+        }
     }
 }
 
