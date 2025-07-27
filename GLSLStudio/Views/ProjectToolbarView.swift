@@ -15,8 +15,8 @@ struct ProjectToolbarView: View {
                 projectsViewModel.saveProject(project)
             }) {
                 Text("Save")
-                    .font(.title2)
-                    .foregroundStyle(.blue)
+                    .bold()
+                    .foregroundStyle(.primary)
             }
 
             Menu {
@@ -38,7 +38,7 @@ struct ProjectToolbarView: View {
             } label: {
                 Image(systemName: "ellipsis.circle")
                     .font(.title2)
-                    .foregroundColor(.blue)
+                    .foregroundColor(.primary)
             }
             
             

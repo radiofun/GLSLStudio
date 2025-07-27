@@ -186,7 +186,7 @@ struct ProjectThumbnail: View {
                     .aspectRatio(contentMode: .fill)
             } else {
                 LinearGradient(
-                    colors: [.blue.opacity(0.3), .orange.opacity(0.3)],
+                    colors: [.primary.opacity(0.1), .primary.opacity(0.3)],
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
                 )
@@ -258,11 +258,11 @@ struct EmptyProjectsView: View {
             Button(action: { showNewProjectSheet = true }) {
                 Label("New Project", systemImage: "plus")
                     .font(.headline)
-                    .foregroundColor(.white)
+                    .foregroundStyle(.buttontext)
                     .padding(.horizontal, 24)
                     .padding(.vertical, 12)
-                    .background(Color.accentColor)
-                    .cornerRadius(8)
+                    .background(.buttonbg)
+                    .cornerRadius(99)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)

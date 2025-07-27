@@ -226,9 +226,7 @@ class GLSLSyntaxHighlighter {
     }
     
     private var typeColor: UIColor {
-        UIColor { traitCollection in
-            traitCollection.userInterfaceStyle == .dark ? UIColor.systemBlue : UIColor.systemBlue
-        }
+        UIColor.label
     }
     
     private var functionColor: UIColor {

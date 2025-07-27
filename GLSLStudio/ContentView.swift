@@ -44,6 +44,7 @@ struct ContentView: View {
             projectsViewModel.setModelContext(modelContext)
             projectsViewModel.connectAutoSave(autoSaveService)
         }
+        .tint(.primary)
     }
 }
 

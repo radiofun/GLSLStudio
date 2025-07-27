@@ -55,12 +55,16 @@ struct NewProjectSheet: View {
                     }
                     .buttonStyle(.bordered)
                     .controlSize(.large)
+                    .cornerRadius(99)
                     
                     Button("Create") {
                         createProject()
                     }
+                    .foregroundStyle(.buttontext)
                     .buttonStyle(.borderedProminent)
                     .controlSize(.large)
+                    .background(.buttonbg)
+                    .cornerRadius(99)
                     .disabled(projectName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 }
             }
@@ -238,20 +242,20 @@ struct TemplateCard: View {
         VStack(spacing: 8) {
             Image(systemName: template.icon)
                 .font(.title)
-                .foregroundColor(isSelected ? .white : .accentColor)
+                .foregroundColor(isSelected ? .buttontext : .accentColor)
             
             Text(template.displayName)
                 .font(.headline)
-                .foregroundColor(isSelected ? .white : .primary)
+                .foregroundColor(isSelected ? .buttontext : .primary)
             
             Text(template.description)
                 .font(.caption)
-                .foregroundColor(isSelected ? .white.opacity(0.8) : .secondary)
+                .foregroundColor(isSelected ? .buttontext.opacity(0.8) : .secondary)
                 .multilineTextAlignment(.center)
         }
         .frame(maxWidth: .infinity, minHeight: 100)
         .padding()
-        .background(isSelected ? Color.accentColor : Color(.systemGray6))
+        .background(isSelected ? Color.buttonbg : Color(.systemGray6))
         .cornerRadius(12)
         .onTapGesture {
             onTap()
