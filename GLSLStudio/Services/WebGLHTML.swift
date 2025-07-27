@@ -49,31 +49,17 @@ extension WebGLService {
             border: 1px solid #ff4444;
             box-shadow: 0 4px 12px rgba(255, 68, 68, 0.3);
         }
-        #stats {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            color: #ffffff;
-            font-family: ui-monospace, "SF Mono", Consolas, "Liberation Mono", Menlo, Courier, monospace;
-            font-size: 8px;
-            background: rgba(0,0,0,0.7);
-            padding: 12px;
-            border-radius: 16px;
-            display: none;
-        }
     </style>
 </head>
 <body>
     <canvas id="canvas"></canvas>
     <div id="error"></div>
-    <div id="stats"></div>
     
     <script>
         class GLSLStudio {
             constructor() {
                 this.canvas = document.getElementById('canvas');
                 this.errorDiv = document.getElementById('error');
-                this.statsDiv = document.getElementById('stats');
                 this.gl = null;
                 this.program = null;
                 this.startTime = Date.now();
@@ -505,17 +491,12 @@ extension WebGLService {
                     this.frameCount = 0;
                     this.lastStatsUpdate = Date.now();
                     
-                    this.updateStats(fps, renderTime);
                     this.sendMessage('stats', { fps: fps, renderTime: renderTime });
                 }
                 
                 this.animationId = requestAnimationFrame(() => this.render());
             }
             
-            updateStats(fps, renderTime) {
-                this.statsDiv.innerHTML = `FPS: ${fps}\\nRender: ${renderTime.toFixed(2)}ms\\nCanvas: ${this.canvas.width}x${this.canvas.height}`;
-                this.statsDiv.style.display = 'block';
-            }
             
             showError(message) {
                 this.errorDiv.textContent = message;

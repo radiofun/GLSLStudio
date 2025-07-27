@@ -1,4 +1,5 @@
 import SwiftUI
+import WebKit
 
 struct ProjectToolbarView: View {
     let project: ShaderProject
@@ -7,9 +8,11 @@ struct ProjectToolbarView: View {
     @State private var showingExportSheet = false
     @State private var showingRenameAlert = false
     @State private var newProjectName = ""
+    @State private var showingFullScreenPreview = false
     
     var body: some View {
         HStack(spacing: 8) {
+            
             
             Button(action: {
                 projectsViewModel.saveProject(project)
@@ -19,6 +22,15 @@ struct ProjectToolbarView: View {
                     .foregroundStyle(.primary)
             }
 
+
+            Button(action: {
+                showingFullScreenPreview = true
+            }) {
+                Image(systemName: "arrow.up.left.and.arrow.down.right")
+                    .font(.title2)
+                    .foregroundColor(.primary)
+            }
+            
             Menu {
                 Button(action: { showingRenameAlert = true }) {
                     Label("Rename", systemImage: "pencil")
@@ -57,6 +69,9 @@ struct ProjectToolbarView: View {
         }
         .sheet(isPresented: $showingExportSheet) {
             EnhancedExportSheet(project: project)
+        }
+        .fullScreenCover(isPresented: $showingFullScreenPreview) {
+            FullScreenPreviewView(project: project)
         }
         .onAppear {
             newProjectName = project.name
@@ -180,5 +195,161 @@ struct ExportOption: View {
             .cornerRadius(12)
         }
         .buttonStyle(PlainButtonStyle())
+    }
+}
+
+struct FullScreenPreviewView: View {
+    let project: ShaderProject
+    @Environment(\.dismiss) private var dismiss
+    @StateObject private var webGLService = WebGLService()
+    @State private var showFPS = true
+    
+    var body: some View {
+        ZStack {
+            Color.black.ignoresSafeArea()
+            
+            FullScreenWebGLPreviewView(
+                project: project,
+                webGLService: webGLService,
+                showFPS: $showFPS
+            )
+            .ignoresSafeArea()
+            .onChange(of: project.vertexShader?.content) { oldValue, newValue in
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                    webGLService.updateShaders(
+                        vertexShader: project.vertexShader?.content ?? "",
+                        fragmentShader: project.fragmentShader?.content ?? ""
+                    )
+                }
+            }
+            .onChange(of: project.fragmentShader?.content) { oldValue, newValue in
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                    webGLService.updateShaders(
+                        vertexShader: project.vertexShader?.content ?? "",
+                        fragmentShader: project.fragmentShader?.content ?? ""
+                    )
+                }
+            }
+            
+            if let error = webGLService.compileError {
+                VStack {
+                    HStack {
+                        VStack(alignment: .leading, spacing: 8) {
+                            HStack {
+                                Image(systemName: "exclamationmark.triangle.fill")
+                                    .foregroundColor(.red)
+                                Text("Shader Error")
+                                    .font(.headline)
+                                    .foregroundColor(.red)
+                            }
+                            
+                            ScrollView {
+                                Text(error)
+                                    .font(.system(.caption, design: .monospaced))
+                                    .foregroundColor(.primary)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                            }
+                            .frame(maxHeight: 200)
+                        }
+                        
+                        Spacer()
+                    }
+                    .padding()
+                    .background(Color(.systemBackground).opacity(0.95))
+                    .cornerRadius(12)
+                    .shadow(radius: 8)
+                    
+                    Spacer()
+                }
+                .padding()
+            }
+            
+            VStack {
+                HStack {
+                    Spacer()
+                    
+                    if showFPS {
+                        VStack(alignment: .trailing, spacing: 4) {
+                            Text("FPS: \(Int(webGLService.fps))")
+                                .font(.system(.caption, design: .monospaced))
+                                .foregroundColor(.white)
+                            Text("Render: \(String(format: "%.1f", webGLService.renderTime))ms")
+                                .font(.system(.caption, design: .monospaced))
+                                .foregroundColor(.white)
+                        }
+                        .padding(12)
+                        .background(Color.black.opacity(0.7))
+                        .cornerRadius(8)
+                        .onTapGesture {
+                            showFPS = false
+                        }
+                    }
+                }
+                .padding()
+                
+                Spacer()
+                
+                HStack {
+                    Button(action: {
+                        dismiss()
+                    }) {
+                        Text("Exit Full Screen")
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 8)
+                            .background(Color.black.opacity(0.7))
+                            .foregroundColor(.white)
+                            .cornerRadius(8)
+                    }
+                    
+                    Spacer()
+                }
+                .padding()
+            }
+        }
+        .onTapGesture(count: 2) {
+            if !showFPS {
+                showFPS = true
+            }
+        }
+        .gesture(
+            TapGesture(count: 2)
+                .onEnded {
+                    if !showFPS {
+                        showFPS = true
+                    }
+                }
+        )
+    }
+}
+
+struct FullScreenWebGLPreviewView: UIViewRepresentable {
+    let project: ShaderProject
+    let webGLService: WebGLService
+    @Binding var showFPS: Bool
+    
+    func makeUIView(context: Context) -> WKWebView {
+        let webView = webGLService.setupWebView()
+        
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+            updateShaders()
+        }
+        
+        return webView
+    }
+    
+    func updateUIView(_ webView: WKWebView, context: Context) {
+        webGLService.setGeometry(.quad)
+    }
+    
+    private func updateShaders() {
+        guard let vertexShader = project.vertexShader,
+              let fragmentShader = project.fragmentShader else { 
+            return 
+        }
+        
+        webGLService.updateShaders(
+            vertexShader: vertexShader.content,
+            fragmentShader: fragmentShader.content
+        )
     }
 }

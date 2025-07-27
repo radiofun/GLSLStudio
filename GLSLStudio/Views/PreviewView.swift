@@ -5,6 +5,7 @@ struct PreviewView: View {
     let project: ShaderProject
     @StateObject private var webGLService = WebGLService()
     @State private var showingControls = false
+    @State private var showFPS = true
     
     var body: some View {
         VStack(spacing: 0) {
@@ -12,7 +13,8 @@ struct PreviewView: View {
             ZStack {
                 WebGLPreviewView(
                     project: project,
-                    webGLService: webGLService
+                    webGLService: webGLService,
+                    showFPS: $showFPS
                 )
                 .onChange(of: project.vertexShader?.content) { oldValue, newValue in
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
@@ -41,6 +43,37 @@ struct PreviewView: View {
                         project: project
                     )
                 }
+                
+                VStack {
+                    HStack {
+                        Spacer()
+                        
+                        if showFPS {
+                            VStack(alignment: .trailing, spacing: 4) {
+                                Text("FPS: \(Int(webGLService.fps))")
+                                    .font(.system(.caption, design: .monospaced))
+                                    .foregroundColor(.white)
+                                Text("Render: \(String(format: "%.1f", webGLService.renderTime))ms")
+                                    .font(.system(.caption, design: .monospaced))
+                                    .foregroundColor(.white)
+                            }
+                            .padding(12)
+                            .background(Color.black.opacity(0.7))
+                            .cornerRadius(8)
+                            .onTapGesture {
+                                showFPS = false
+                            }
+                        }
+                    }
+                    .padding()
+                    
+                    Spacer()
+                }
+            }
+            .onTapGesture(count: 2) {
+                if !showFPS {
+                    showFPS = true
+                }
             }
         }
     }
@@ -49,6 +82,7 @@ struct PreviewView: View {
 struct WebGLPreviewView: UIViewRepresentable {
     let project: ShaderProject
     let webGLService: WebGLService
+    @Binding var showFPS: Bool
     
     func makeUIView(context: Context) -> WKWebView {
         let webView = webGLService.setupWebView()
