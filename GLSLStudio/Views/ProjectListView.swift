@@ -246,19 +246,12 @@ struct EmptyProjectsView: View {
     
     var body: some View {
         VStack(spacing: 20) {
-            Image(systemName: "cube.transparent")
-                .font(.system(size: 60))
-                .foregroundColor(.secondary)
             
             VStack(spacing: 8) {
                 Text("No Projects")
                     .font(.title2)
                     .fontWeight(.semibold)
                 
-                Text("Create your first GLSL shader project to get started")
-                    .font(.body)
-                    .foregroundColor(.secondary)
-                    .multilineTextAlignment(.center)
             }
             
             Button(action: { showNewProjectSheet = true }) {
