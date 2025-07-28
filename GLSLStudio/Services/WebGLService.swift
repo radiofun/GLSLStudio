@@ -2,15 +2,32 @@ import Foundation
 import WebKit
 
 class WebGLService: NSObject, ObservableObject {
+    static let shared = WebGLService()
+    
     private var webView: WKWebView?
     private var messageHandler: WebGLMessageHandler?
+    private var currentProjectId: UUID?
     
     @Published var isReady = false
     @Published var compileError: String?
     @Published var fps: Double = 0
     @Published var renderTime: Double = 0
     
-    func setupWebView() -> WKWebView {
+    private override init() {
+        super.init()
+    }
+    
+    func setupWebView(for projectId: UUID) -> WKWebView {
+        // Clean up existing WebView if switching projects
+        if let existingView = webView, currentProjectId != projectId {
+            cleanupWebView()
+        }
+        
+        // Reuse existing WebView if same project
+        if let existingView = webView, currentProjectId == projectId {
+            return existingView
+        }
+        
         let configuration = WKWebViewConfiguration()
         configuration.allowsInlineMediaPlayback = true
         configuration.mediaTypesRequiringUserActionForPlayback = []
@@ -31,9 +48,29 @@ class WebGLService: NSObject, ObservableObject {
         webView.translatesAutoresizingMaskIntoConstraints = false
         
         self.webView = webView
+        self.currentProjectId = projectId
         loadWebGLRuntime()
         
+        print("🔄 WebGLService: Created new WebView for project: \(projectId)")
+        
         return webView
+    }
+    
+    private func cleanupWebView() {
+        if let webView = webView {
+            webView.stopLoading()
+            webView.configuration.userContentController.removeScriptMessageHandler(forName: "nativeHandler")
+            webView.removeFromSuperview()
+            print("🧹 WebGLService: Cleaned up WebView for project: \(currentProjectId?.uuidString ?? "unknown")")
+        }
+        
+        messageHandler = nil
+        webView = nil
+        currentProjectId = nil
+        isReady = false
+        compileError = nil
+        fps = 0
+        renderTime = 0
     }
     
     func updateShaders(vertexShader: String, fragmentShader: String) {
@@ -111,6 +148,11 @@ class WebGLService: NSObject, ObservableObject {
         
         let html = createWebGLHTML()
         webView.loadHTMLString(html, baseURL: nil)
+    }
+    
+    deinit {
+        cleanupWebView()
+        print("🗑️ WebGLService: Deallocated")
     }
 }
 

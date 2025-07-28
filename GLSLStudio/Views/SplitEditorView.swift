@@ -4,7 +4,6 @@ struct SplitEditorView: View {
     let project: ShaderProject
     @EnvironmentObject var projectsViewModel: ProjectsViewModel
     @State private var selectedShaderFile: ShaderFile?
-    @State private var shaderUpdateTrigger = 0
     
     var body: some View {
         HStack(spacing: 0) {
@@ -17,9 +16,12 @@ struct SplitEditorView: View {
             }
                         
             VStack(spacing: 0) {
-                PreviewView(project: project)
+                PreviewView(
+                    project: project, 
+                    selectedShaderFile: selectedShaderFile
+                )
                     .frame(minWidth: 400)
-                    .id(shaderUpdateTrigger) // Force refresh when trigger changes
+                    .id(project.id) // Force recreation when project changes
             }
         }
         .navigationTitle(project.name)

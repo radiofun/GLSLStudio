@@ -23,7 +23,7 @@ class ProjectsViewModel: ObservableObject {
         
         do {
             let descriptor = FetchDescriptor<ShaderProject>(
-                sortBy: [SortDescriptor(\.lastModifiedDate, order: .reverse)]
+                sortBy: [SortDescriptor(\.createdDate, order: .forward)]
             )
             projects = try context.fetch(descriptor)
         } catch {
@@ -113,6 +113,20 @@ class ProjectsViewModel: ObservableObject {
     func updateShaderContent(_ shaderFile: ShaderFile, content: String) {
         shaderFile.updateContent(content)
         
+        if let project = shaderFile.project {
+            saveProject(project)
+        }
+    }
+    
+    func updateProjectThumbnail(_ project: ShaderProject, thumbnailData: Data) {
+        print("💾 Updating thumbnail for project: \(project.name) (ID: \(project.id))")
+        project.thumbnailData = thumbnailData
+        saveProject(project)
+        print("✅ Thumbnail updated and saved for project: \(project.name)")
+    }
+    
+    func updateShaderFileThumbnail(_ shaderFile: ShaderFile, thumbnailData: Data) {
+        shaderFile.thumbnailData = thumbnailData
         if let project = shaderFile.project {
             saveProject(project)
         }

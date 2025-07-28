@@ -199,7 +199,7 @@ struct ExportOption: View {
 struct FullScreenPreviewView: View {
     let project: ShaderProject
     @Environment(\.dismiss) private var dismiss
-    @StateObject private var webGLService = WebGLService()
+    @ObservedObject private var webGLService = WebGLService.shared
     @State private var showFPS = true
     
     var body: some View {
@@ -208,7 +208,6 @@ struct FullScreenPreviewView: View {
             
             FullScreenWebGLPreviewView(
                 project: project,
-                webGLService: webGLService,
                 showFPS: $showFPS
             )
             .ignoresSafeArea()
@@ -318,11 +317,12 @@ struct FullScreenPreviewView: View {
 
 struct FullScreenWebGLPreviewView: UIViewRepresentable {
     let project: ShaderProject
-    let webGLService: WebGLService
     @Binding var showFPS: Bool
     
+    private let webGLService = WebGLService.shared
+    
     func makeUIView(context: Context) -> WKWebView {
-        let webView = webGLService.setupWebView()
+        let webView = webGLService.setupWebView(for: project.id)
         
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
             updateShaders()

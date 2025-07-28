@@ -27,6 +27,7 @@ final class ShaderFile {
     var type: ShaderType
     var content: String
     var lastModifiedDate: Date
+    var thumbnailData: Data?
     
     var project: ShaderProject?
     

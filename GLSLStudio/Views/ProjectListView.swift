@@ -99,7 +99,9 @@ struct ProjectGrid: View {
                         project: project,
                         isSelected: selectedProject?.id == project.id
                     ) {
-                        selectedProject = project
+                        withAnimation(){
+                            selectedProject = project
+                        }
                     }
                     .contextMenu {
                         ProjectContextMenu(
@@ -169,7 +171,10 @@ struct ProjectCard: View {
                 .stroke(isSelected ? Color.accentColor : Color.clear, lineWidth: 2)
         )
         .onTapGesture {
-            onTap()
+            withAnimation(){
+                onTap()
+            }
+            
         }
     }
 }
@@ -179,6 +184,7 @@ struct ProjectThumbnail: View {
     
     var body: some View {
         ZStack {
+            // Use project thumbnail data
             if let thumbnailData = project.thumbnailData,
                let uiImage = UIImage(data: thumbnailData) {
                 Image(uiImage: uiImage)
