@@ -4,6 +4,7 @@ struct SplitEditorView: View {
     let project: ShaderProject
     @EnvironmentObject var projectsViewModel: ProjectsViewModel
     @State private var selectedShaderFile: ShaderFile?
+    @State private var previewRefreshTrigger = 0
     
     var body: some View {
         HStack(spacing: 0) {
@@ -21,14 +22,25 @@ struct SplitEditorView: View {
                     selectedShaderFile: selectedShaderFile
                 )
                     .frame(minWidth: 400)
-                    .id(project.id) // Force recreation when project changes
+                    .id("\(project.id)-\(previewRefreshTrigger)") // Force recreation when project changes or refresh trigger
+                    .onChange(of: previewRefreshTrigger) { oldValue, newValue in
+                        print("🔄 SplitEditorView: PreviewView ID changing due to refresh trigger: \(oldValue) -> \(newValue)")
+                    }
             }
         }
         .navigationTitle(project.name)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItemGroup(placement: .navigationBarTrailing) {
-                ProjectToolbarView(project: project)
+                ProjectToolbarView(
+                    project: project,
+                    onFullScreenDismiss: {
+                        // Trigger preview refresh when returning from full screen
+                        let oldTrigger = previewRefreshTrigger
+                        previewRefreshTrigger += 1
+                        print("🔄 SplitEditorView: Triggering preview refresh after full screen dismiss (trigger: \(oldTrigger) -> \(previewRefreshTrigger))")
+                    }
+                )
             }
         }
         .onAppear {

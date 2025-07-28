@@ -6,7 +6,7 @@ struct PreviewView: View {
     let selectedShaderFile: ShaderFile?
     @ObservedObject private var webGLService = WebGLService.shared
     @State private var showingControls = false
-    @State private var showFPS = true
+    @AppStorage("show_fps_preference") private var showFPS = true
     @State private var captureWorkItems: [DispatchWorkItem] = []
     @State private var hasCapturedInSession = false
     @State private var contentChangeTimer: Timer?
@@ -20,30 +20,7 @@ struct PreviewView: View {
                     project: project,
                     showFPS: $showFPS
                 )
-                .onChange(of: project.vertexShader?.content) { oldValue, newValue in
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                        webGLService.updateShaders(
-                            vertexShader: project.vertexShader?.content ?? "",
-                            fragmentShader: project.fragmentShader?.content ?? ""
-                        )
-                        // Debounced thumbnail capture when content changes
-                        if oldValue != nil && oldValue != newValue {
-                            debouncedCaptureThumbnail()
-                        }
-                    }
-                }
-                .onChange(of: project.fragmentShader?.content) { oldValue, newValue in
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                        webGLService.updateShaders(
-                            vertexShader: project.vertexShader?.content ?? "",
-                            fragmentShader: project.fragmentShader?.content ?? ""
-                        )
-                        // Debounced thumbnail capture when content changes
-                        if oldValue != nil && oldValue != newValue {
-                            debouncedCaptureThumbnail()
-                        }
-                    }
-                }
+                
                 
                 if let error = webGLService.compileError {
                     ErrorOverlay(error: error)
@@ -72,9 +49,6 @@ struct PreviewView: View {
                             .padding(12)
                             .background(Color.black.opacity(0.7))
                             .cornerRadius(8)
-                            .onTapGesture {
-                                showFPS = false
-                            }
                         }
                     }
                     .padding()
@@ -82,13 +56,38 @@ struct PreviewView: View {
                     Spacer()
                 }
             }
-            .onTapGesture(count: 2) {
-                if !showFPS {
-                    showFPS = true
+            .onChange(of: project.vertexShader?.content) { oldValue, newValue in
+                print("🔄 Vertex shader content changed for project: \(project.name)")
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                    webGLService.updateShaders(
+                        vertexShader: project.vertexShader?.content ?? "",
+                        fragmentShader: project.fragmentShader?.content ?? "",
+                        forProject: project.id
+                    )
+                    // Debounced thumbnail capture when content changes
+                    if oldValue != nil && oldValue != newValue {
+                        debouncedCaptureThumbnail()
+                    }
+                }
+            }
+            .onChange(of: project.fragmentShader?.content) { oldValue, newValue in
+                print("🔄 Fragment shader content changed for project: \(project.name)")
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                    webGLService.updateShaders(
+                        vertexShader: project.vertexShader?.content ?? "",
+                        fragmentShader: project.fragmentShader?.content ?? "",
+                        forProject: project.id
+                    )
+                    // Debounced thumbnail capture when content changes
+                    if oldValue != nil && oldValue != newValue {
+                        debouncedCaptureThumbnail()
+                    }
                 }
             }
             .onAppear {
                 print("👁️ PreviewView appeared for project: \(project.name) (ID: \(project.id))")
+                print("👁️ PreviewView: WebGL service ready state: \(webGLService.isReady)")
+                
                 // Only capture thumbnail on first view if project doesn't have one and hasn't been captured in this session
                 if project.thumbnailData == nil && !hasCapturedInSession {
                     DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
@@ -147,10 +146,22 @@ struct WebGLPreviewView: UIViewRepresentable {
     private let webGLService = WebGLService.shared
     
     func makeUIView(context: Context) -> WKWebView {
-        let webView = webGLService.setupWebView(for: project.id)
+        print("🏗️ WebGLPreviewView: Creating WebView for project: \(project.name) (ID: \(project.id))")
+        
+        // Force recreation to ensure fresh context (especially after returning from full screen)
+        let webView = webGLService.setupWebView(for: project.id, forceRecreate: true)
+        
+        print("🏗️ WebGLPreviewView: WebView created, scheduling shader loads...")
         
         // Initial shader load - wait for WebGL to initialize
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+            print("⏰ WebGLPreviewView: Attempting initial shader load for project: \(project.name)")
+            updateShaders()
+        }
+        
+        // Backup shader load in case the first one doesn't work
+        DispatchQueue.main.asyncAfter(deadline: .now() + 4.0) {
+            print("🔄 WebGLPreviewView: Backup shader load attempt for project: \(project.name)")
             updateShaders()
         }
         
@@ -165,21 +176,23 @@ struct WebGLPreviewView: UIViewRepresentable {
     private func updateShaders() {
         guard let vertexShader = project.vertexShader,
               let fragmentShader = project.fragmentShader else { 
-            print("❌ Preview: No shaders found in project")
+            print("❌ WebGLPreviewView: No shaders found in project: \(project.name) (ID: \(project.id))")
             return 
         }
         
-        print("🔄 Preview: Updating shaders...")
+        print("🔄 WebGLPreviewView: Updating shaders for project: \(project.name) (ID: \(project.id))")
         print("📝 Vertex shader (first 100 chars): \(String(vertexShader.content.prefix(100)))")
         print("📝 Fragment shader (first 100 chars): \(String(fragmentShader.content.prefix(100)))")
+        print("🔄 WebGLPreviewView: Vertex shader file ID: \(vertexShader.id)")
+        print("🔄 WebGLPreviewView: Fragment shader file ID: \(fragmentShader.id)")
         
         webGLService.updateShaders(
             vertexShader: vertexShader.content,
-            fragmentShader: fragmentShader.content
+            fragmentShader: fragmentShader.content,
+            forProject: project.id
         )
     }
 }
-
 
 
 struct ErrorOverlay: View {

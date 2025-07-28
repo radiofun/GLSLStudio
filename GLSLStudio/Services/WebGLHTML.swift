@@ -30,6 +30,58 @@ extension WebGLService {
             position: absolute;
             top: 0;
             left: 0;
+            opacity: 0;
+            transition: opacity 0.5s ease-in-out;
+        }
+        canvas.loaded {
+            opacity: 1;
+        }
+        #loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 16px;
+            padding: 20px;
+            background: rgba(0,0,0,0.7);
+            border-radius: 12px;
+            opacity: 1;
+            transition: opacity 0.3s ease-out;
+        }
+        #loading.hide {
+            opacity: 0;
+        }
+        #loading-text {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+        #loading-bar {
+            width: 200px;
+            height: 4px;
+            background: rgba(128, 128, 128, 0.3);
+            border-radius: 2px;
+            position: relative;
+            overflow: hidden;
+        }
+        #loading-progress {
+            width: 80px;
+            height: 100%;
+            background: white;
+            border-radius: 2px;
+            position: absolute;
+            left: -80px;
+            animation: loading-slide 1.2s ease-in-out infinite alternate;
+        }
+        @keyframes loading-slide {
+            0% { left: -80px; }
+            100% { left: 200px; }
         }
         #error {
             position: absolute;
@@ -53,6 +105,11 @@ extension WebGLService {
 </head>
 <body>
     <canvas id="canvas"></canvas>
+    <div id="loading">
+        <div id="loading-bar">
+            <div id="loading-progress"></div>
+        </div>
+    </div>
     <div id="error"></div>
     
     <script>
@@ -60,6 +117,7 @@ extension WebGLService {
             constructor() {
                 this.canvas = document.getElementById('canvas');
                 this.errorDiv = document.getElementById('error');
+                this.loadingDiv = document.getElementById('loading');
                 this.gl = null;
                 this.program = null;
                 this.startTime = Date.now();
@@ -79,6 +137,7 @@ extension WebGLService {
                 this.setupCanvas();
                 if (this.initWebGL()) {
                     this.createGeometries();
+                    console.log('WebGL initialized, sending ready message...');
                     this.sendMessage('ready');
                     
                     // Check for pending shaders
@@ -87,8 +146,12 @@ extension WebGLService {
                         this.updateShaders(window.pendingShaders.vertex, window.pendingShaders.fragment);
                         window.pendingShaders = null;
                     } else {
+                        console.log('No pending shaders, starting render loop...');
                         this.startRender();
                     }
+                } else {
+                    console.error('Failed to initialize WebGL');
+                    this.showError('Failed to initialize WebGL. Please check your browser compatibility.');
                 }
             }
             
@@ -344,6 +407,9 @@ extension WebGLService {
                     
                     console.log('Shaders compiled successfully, starting render...');
                     
+                    // Hide loading and show canvas with fade-in after successful shader compilation
+                    this.showCanvas();
+                    
                     // Start rendering if not already started
                     if (!this.animationId) {
                         this.startRender();
@@ -440,12 +506,22 @@ extension WebGLService {
             }
             
             startRender() {
-                if (!this.gl) return;
+                console.log('Starting render loop...');
+                if (!this.gl) {
+                    console.error('Cannot start render: No GL context');
+                    return;
+                }
                 this.render();
             }
             
             render() {
                 if (!this.gl) {
+                    console.error('Cannot render: No GL context');
+                    return;
+                }
+                
+                if (!this.program) {
+                    console.error('Cannot render: No shader program');
                     return;
                 }
                 
@@ -508,6 +584,30 @@ extension WebGLService {
                 this.sendMessage('clearError');
             }
             
+            hideLoading() {
+                if (this.loadingDiv) {
+                    this.loadingDiv.classList.add('hide');
+                    // Remove from DOM after animation completes
+                    setTimeout(() => {
+                        if (this.loadingDiv) {
+                            this.loadingDiv.style.display = 'none';
+                        }
+                    }, 300);
+                    console.log('Loading screen hidden');
+                }
+            }
+            
+            showCanvas() {
+                // Hide loading with fade out
+                this.hideLoading();
+                
+                // Show canvas with fade in
+                if (this.canvas) {
+                    this.canvas.classList.add('loaded');
+                    console.log('Canvas shown with fade-in');
+                }
+            }
+            
             captureFrame() {
                 return this.canvas.toDataURL('image/png');
             }
@@ -530,8 +630,13 @@ extension WebGLService {
             window.mousePos.y = rect.height - (e.clientY - rect.top);
         });
         
-        // Initialize
-        window.glslStudio = new GLSLStudio();
+        // Initialize with a slight delay to ensure DOM is ready
+        console.log('DOM loaded, initializing GLSL Studio...');
+        setTimeout(() => {
+            console.log('Creating GLSL Studio instance...');
+            window.glslStudio = new GLSLStudio();
+            console.log('GLSL Studio instance created and assigned to window');
+        }, 100);
     </script>
 </body>
 </html>

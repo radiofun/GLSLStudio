@@ -7,24 +7,28 @@ class WebGLService: NSObject, ObservableObject {
     private var webView: WKWebView?
     private var messageHandler: WebGLMessageHandler?
     private var currentProjectId: UUID?
+    private var operationId = UUID() // Unique ID for each WebGL context session
+    private var pendingOperations: Set<UUID> = []
     
     @Published var isReady = false
     @Published var compileError: String?
     @Published var fps: Double = 0
     @Published var renderTime: Double = 0
     
-    private override init() {
+    override init() {
         super.init()
     }
     
-    func setupWebView(for projectId: UUID) -> WKWebView {
-        // Clean up existing WebView if switching projects
-        if let existingView = webView, currentProjectId != projectId {
+    func setupWebView(for projectId: UUID, forceRecreate: Bool = false) -> WKWebView {
+        // Clean up existing WebView if switching projects or forced recreation
+        if let existingView = webView, (currentProjectId != projectId || forceRecreate) {
+            print("🔄 WebGLService: \(forceRecreate ? "Force recreating" : "Switching from project \(currentProjectId?.uuidString ?? "unknown") to") WebView for project: \(projectId.uuidString)")
             cleanupWebView()
         }
         
-        // Reuse existing WebView if same project
-        if let existingView = webView, currentProjectId == projectId {
+        // Reuse existing WebView if same project and not forced recreation
+        if let existingView = webView, currentProjectId == projectId && !forceRecreate {
+            print("♻️ WebGLService: Reusing existing WebView for project: \(projectId.uuidString)")
             return existingView
         }
         
@@ -57,6 +61,13 @@ class WebGLService: NSObject, ObservableObject {
     }
     
     private func cleanupWebView() {
+        // Cancel all pending operations
+        print("🧹 WebGLService: Cancelling \(pendingOperations.count) pending operations")
+        pendingOperations.removeAll()
+        
+        // Invalidate current operation session
+        operationId = UUID()
+        
         if let webView = webView {
             webView.stopLoading()
             webView.configuration.userContentController.removeScriptMessageHandler(forName: "nativeHandler")
@@ -73,28 +84,65 @@ class WebGLService: NSObject, ObservableObject {
         renderTime = 0
     }
     
-    func updateShaders(vertexShader: String, fragmentShader: String) {
-        guard let webView = webView else { return }
+    func updateShaders(vertexShader: String, fragmentShader: String, forProject projectId: UUID, retryCount: Int = 0) {
+        guard let webView = webView else { 
+            print("❌ WebGLService: No webView available for shader update")
+            return 
+        }
+        
+        // Validate that this operation is for the current project
+        guard currentProjectId == projectId else {
+            print("❌ WebGLService: Shader update cancelled - project mismatch (current: \(currentProjectId?.uuidString ?? "none"), requested: \(projectId.uuidString))")
+            return
+        }
+        
+        // Create unique operation ID for this shader update
+        let operationUUID = UUID()
+        let currentOperationId = operationId
+        pendingOperations.insert(operationUUID)
+        
+        print("🔄 WebGLService: Updating shaders for project: \(projectId.uuidString), operation: \(operationUUID)")
+        print("🔄 WebGLService: WebGL ready state: \(isReady), retry count: \(retryCount)")
         
         let escapedVertex = vertexShader.replacingOccurrences(of: "`", with: "\\`")
         let escapedFragment = fragmentShader.replacingOccurrences(of: "`", with: "\\`")
         
         let script = """
         if (window.glslStudio) {
-            console.log('Updating shaders...');
+            console.log('✅ GLSL Studio ready, updating shaders...');
             window.glslStudio.updateShaders(`\(escapedVertex)`, `\(escapedFragment)`);
+            true; // Return success
         } else {
-            console.log('GLSL Studio not ready yet, queuing shader update...');
+            console.log('⏳ GLSL Studio not ready yet, queuing shader update...');
             window.pendingShaders = {
                 vertex: `\(escapedVertex)`,
                 fragment: `\(escapedFragment)`
             };
+            false; // Return not ready
         }
         """
         
         webView.evaluateJavaScript(script) { result, error in
+            // Remove operation from pending set
+            self.pendingOperations.remove(operationUUID)
+            
+            // Check if this operation is still valid (project and session haven't changed)
+            guard self.currentProjectId == projectId && self.operationId == currentOperationId else {
+                print("❌ WebGLService: Shader update result ignored - context changed (operation: \(operationUUID))")
+                return
+            }
+            
             if let error = error {
-                print("Error updating shaders: \(error)")
+                print("❌ WebGLService: Error updating shaders: \(error)")
+            } else if let success = result as? Bool, success {
+                print("✅ WebGLService: Shader update successful (operation: \(operationUUID))")
+            } else if retryCount < 3 {
+                print("⏳ WebGLService: WebGL not ready, retrying in 1 second (attempt \(retryCount + 1)/3)")
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                    self.updateShaders(vertexShader: vertexShader, fragmentShader: fragmentShader, forProject: projectId, retryCount: retryCount + 1)
+                }
+            } else {
+                print("❌ WebGLService: Failed to update shaders after 3 retries")
             }
         }
     }
@@ -150,6 +198,20 @@ class WebGLService: NSObject, ObservableObject {
         webView.loadHTMLString(html, baseURL: nil)
     }
     
+    func forceCleanup() {
+        print("🧹 WebGLService: Force cleanup requested")
+        cleanupWebView()
+    }
+    
+    func cancelOperationsForProject(_ projectId: UUID) {
+        if currentProjectId == projectId {
+            print("🚫 WebGLService: Cancelling operations for current project: \(projectId.uuidString)")
+            cleanupWebView()
+        } else {
+            print("🚫 WebGLService: Project \(projectId.uuidString) not current, no operations to cancel")
+        }
+    }
+    
     deinit {
         cleanupWebView()
         print("🗑️ WebGLService: Deallocated")
@@ -170,12 +232,15 @@ class WebGLMessageHandler: NSObject, WKScriptMessageHandler {
         DispatchQueue.main.async {
             switch type {
             case "ready":
+                print("✅ WebGLService: Received 'ready' message from WebGL")
                 self.service?.isReady = true
             case "error":
                 if let error = body["message"] as? String {
+                    print("❌ WebGLService: Received error: \(error)")
                     self.service?.compileError = error
                 }
             case "clearError":
+                print("🧹 WebGLService: Clearing error")
                 self.service?.compileError = nil
             case "stats":
                 if let fps = body["fps"] as? Double {
@@ -185,6 +250,7 @@ class WebGLMessageHandler: NSObject, WKScriptMessageHandler {
                     self.service?.renderTime = renderTime
                 }
             default:
+                print("🤷‍♂️ WebGLService: Unknown message type: \(type)")
                 break
             }
         }

@@ -52,6 +52,16 @@ struct ContentView: View {
                 selectedProject = nil
             }
         }
+        .onChange(of: selectedProject) { oldValue, newValue in
+            // Cancel operations for the old project when switching projects
+            if let oldProject = oldValue, let newProject = newValue, oldProject.id != newProject.id {
+                print("🔄 ContentView: Project switching from \(oldProject.name) to \(newProject.name)")
+                WebGLService.shared.cancelOperationsForProject(oldProject.id)
+            } else if let oldProject = oldValue, newValue == nil {
+                print("🔄 ContentView: Project \(oldProject.name) deselected")
+                WebGLService.shared.cancelOperationsForProject(oldProject.id)
+            }
+        }
         .tint(.primary)
     }
 }
